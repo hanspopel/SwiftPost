@@ -77,12 +77,16 @@ struct CreateRecordPayload<Record: Codable>: Codable {
 // MARK: - 3. Datenstrukturen für Media/Upload
 
 // 3a. BlobRef: Repräsentiert die Referenz auf die hochgeladenen Bilddaten.
+struct UploadBlobResponse: Codable {
+    let blob: BlobRef
+}
+
 struct BlobRef: Codable {
-    let type: String = "blob" // Muss "$type": "blob" sein
-    let ref: String // Die DID/CID des Blobs
+    let type: String?
+    let ref: BlobRefLink
     let mimeType: String
     let size: Int
-    
+
     enum CodingKeys: String, CodingKey {
         case type = "$type"
         case ref
@@ -91,15 +95,26 @@ struct BlobRef: Codable {
     }
 }
 
-// 3b. UploadBlobResponse: Die Antwort vom uploadBlob-Endpunkt.
-struct UploadBlobResponse: Codable {
-    let blob: BlobRef
+struct BlobRefLink: Codable {
+    let link: String
+
+    enum CodingKeys: String, CodingKey {
+        case link = "$link"
+    }
 }
+
+
 
 // 3c. ImageEntry: Repräsentiert ein einzelnes Bild im Embed-Array (enthält den Blob und Alt-Text).
 struct ImageEntry: Codable {
-    let image: BlobRef // Die Blob-Referenz
-    let alt: String? // Alternativtext
+    let image: BlobRef
+    let alt: String
+
+    init(image: BlobRef, alt: String?) {
+        // Bluesky requires the field "alt" to exist — empty string if none provided
+        self.image = image
+        self.alt = alt ?? ""
+    }
 }
 
 // 3d. MediaEmbed: Repräsentiert das gesamte Embed-Objekt für Bilder.
@@ -234,39 +249,73 @@ class BlueskyAPIClient {
     // MARK: - API-Funktion 3: Blob hochladen (Medien-Upload)
     
     /// Lädt binäre Daten (z.B. ein Bild) hoch und gibt eine Blob-Referenz zurück.
+//    func uploadBlob(data: Data, mimeType: String) async throws -> BlobRef {
+//        guard let token = accessToken else {
+//            throw BlueskyError.apiError(status: 401, message: "Authentication required.")
+//        }
+//        
+//        guard let url = URL(string: "\(pdsURL)/com.atproto.repo.uploadBlob") else {
+//            throw BlueskyError.invalidURL
+//        }
+//        
+//        var request = URLRequest(url: url)
+//        request.httpMethod = "POST"
+//        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+//        request.setValue(mimeType, forHTTPHeaderField: "Content-Type")
+//        request.httpBody = data
+//        
+//        let (respData, response) = try await URLSession.shared.data(for: request)
+//        
+//        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+//            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+//            let errorMsg = String(data: respData, encoding: .utf8) ?? "Unknown Error"
+//            throw BlueskyError.apiError(status: status, message: "UploadBlob failed: \(errorMsg)")
+//        }
+//        
+//        do {
+//            let result = try JSONDecoder().decode(UploadBlobResponse.self, from: respData)
+//            return result.blob
+//        } catch {
+//            print("Decoding Error (Upload Blob Response): \(error)")
+//            throw BlueskyError.decodingError(error)
+//        }
+//    }
+//    
     func uploadBlob(data: Data, mimeType: String) async throws -> BlobRef {
         guard let token = accessToken else {
-            throw BlueskyError.apiError(status: 401, message: "Authentication required.")
+            throw BlueskyError.apiError(status: 401, message: "Not authenticated")
         }
-        
         guard let url = URL(string: "\(pdsURL)/com.atproto.repo.uploadBlob") else {
             throw BlueskyError.invalidURL
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue(mimeType, forHTTPHeaderField: "Content-Type")
         request.httpBody = data
-        
+
         let (respData, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-            let errorMsg = String(data: respData, encoding: .utf8) ?? "Unknown Error"
-            throw BlueskyError.apiError(status: status, message: "UploadBlob failed: \(errorMsg)")
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw BlueskyError.apiError(status: 0, message: "No HTTP response")
         }
-        
+
+        guard httpResponse.statusCode == 200 else {
+            let msg = String(data: respData, encoding: .utf8) ?? "Unknown error"
+            throw BlueskyError.apiError(status: httpResponse.statusCode, message: msg)
+        }
+
         do {
-            let result = try JSONDecoder().decode(UploadBlobResponse.self, from: respData)
-            return result.blob
+            let decoded = try JSONDecoder().decode(UploadBlobResponse.self, from: respData)
+            return decoded.blob
         } catch {
             print("Decoding Error (Upload Blob Response): \(error)")
+            print("Raw response:", String(data: respData, encoding: .utf8) ?? "n/a")
             throw BlueskyError.decodingError(error)
         }
     }
-    
-    
+
     // MARK: - API-Funktion 4: Post mit Medien erstellen
     
     /// Erstellt einen Feed-Post mit Text und einem Bild.
@@ -282,9 +331,8 @@ class BlueskyAPIClient {
         guard let token = accessToken, let repoDid = did else {
             throw BlueskyError.apiError(status: 401, message: "Authentication required. Call createSession first.")
         }
-        
-        // 1. BLOB HOCHLADEN
         let blobRef = try await uploadBlob(data: imageData, mimeType: imageMimeType)
+        // 1. BLOB HOCHLADEN
         
         // 2. EMBED-OBJEKT ERSTELLEN
         let imageEntry = ImageEntry(image: blobRef, alt: imageAlt)
@@ -344,5 +392,45 @@ class BlueskyAPIClient {
             print("Decoding Error (Post Response with Media): \(error)")
             throw BlueskyError.decodingError(error)
         }
+    }
+}
+
+import UIKit
+
+extension UIImage {
+    /// Compresses and resizes the image to stay below 900 KB (safe for Bluesky)
+    func prepareForBlueskyUpload(maxBytes: Int = 950_000) -> Data? {
+        // Step 1: Resize large images down (e.g. 2048 px max dimension)
+        let maxDimension: CGFloat = 2048
+        let aspectRatio = size.width / size.height
+        var newSize = size
+
+        if size.width > maxDimension || size.height > maxDimension {
+            if aspectRatio > 1 {
+                newSize = CGSize(width: maxDimension, height: maxDimension / aspectRatio)
+            } else {
+                newSize = CGSize(width: maxDimension * aspectRatio, height: maxDimension)
+            }
+        }
+
+        // Create resized image context
+        UIGraphicsBeginImageContextWithOptions(newSize, true, 1.0)
+        draw(in: CGRect(origin: .zero, size: newSize))
+        let resizedImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+
+        guard var imageData = resizedImage?.jpegData(compressionQuality: 0.9) else { return nil }
+
+        // Step 2: Gradually reduce quality until below maxBytes
+        var compression: CGFloat = 0.9
+        while imageData.count > maxBytes && compression > 0.1 {
+            compression -= 0.1
+            if let data = resizedImage?.jpegData(compressionQuality: compression) {
+                imageData = data
+            }
+        }
+
+        print("📦 Compressed image size: \(Double(imageData.count) / 1024.0) KB (quality: \(compression))")
+        return imageData
     }
 }

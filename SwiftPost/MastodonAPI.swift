@@ -1,454 +1,223 @@
-//
-//  Untitled.swift
-//  SwiftPost
-//
-//  Created by Pascal Kaap on 06.11.25.
-//
-
-import SwiftUI
 import Foundation
+import UIKit // Für die Verwendung von UIImage
 
-// MARK: - Models
+// MARK: - 1. Fehler- und Hilfsstrukturen
 
-enum AccountKind: String, Codable {
-    case twitter
-    case bluesky
+/**
+ * Allgemeine Fehler, die bei Mastodon API-Aufrufen auftreten können.
+ */
+enum MastodonError: Error {
+    case invalidURL
+    case invalidImageData
+    case missingCredentials
+    case encodingError(Error)
+    case decodingError(Error)
+    case apiError(status: Int, message: String)
 }
 
-struct Account: Identifiable, Codable {
-    let id: UUID
-    var name: String
-    var kind: AccountKind
-    var enabled: Bool
-    // Twitter fields
-    var accessToken: String?
-    var accessSecret: String?
-    var apiKey: String?
-    var apiSecret: String?
-    // Bluesky fields
-    var handle: String?
-    var accessJwt: String?
-    var did: String?
-    init(id: UUID = UUID(),
-         name: String,
-         kind: AccountKind,
-         enabled: Bool = true,
-         accessToken: String? = nil,
-         accessSecret: String? = nil,
-         apiKey: String? = nil,
-         apiSecret: String? = nil,
-         handle: String? = nil,
-         accessJwt: String? = nil,
-         did: String? = nil) {
-        self.id = id
-        self.name = name
-        self.kind = kind
-        self.enabled = enabled
+/**
+ * Antwortstruktur für Medien-Upload (/api/v1/media).
+ */
+struct MediaResponse: Codable {
+    let id: String // Media ID, die für den Status-Post benötigt wird
+    let type: String // "image", "video", "gif"
+    let url: String? // Temporäre URL
+    let previewUrl: String?
+    
+    // Wir ignorieren hier die anderen optionalen Felder wie metadata, remote_url, etc.
+}
+
+/**
+ * Antwortstruktur für Status-Post (/api/v1/statuses).
+ */
+struct StatusResponse: Codable {
+    let id: String
+    let uri: String
+    let url: String? // Link zum Post im Web
+    let content: String // Der gerenderte HTML-Inhalt des Posts
+    // Weitere Felder (account, created_at, reblog, etc.) wurden weggelassen.
+}
+
+
+// MARK: - 2. MastodonAPIClient Klasse
+
+class MastodonAPIClient {
+    
+    // Status-Speicher
+    private(set) var instanceURL: String?
+    private(set) var accessToken: String?
+    
+    // MARK: - Initialisierung & Authentifizierung
+    
+    init() {
+        // Der Client wird initialisiert. Zugangsdaten müssen separat gesetzt werden.
+    }
+    
+    /**
+     * Speichert die Zugangsdaten (Instanz-URL und Bearer Token).
+     * Mastodon verwendet OAuth 2.0 Bearer Token, die typischerweise im Voraus über die App-Registrierung
+     * oder einen OAuth-Flow beschafft werden.
+     */
+    func setCredentials(instanceURL: String, accessToken: String) {
+        // Entfernt den nachfolgenden Schrägstrich, falls vorhanden
+        self.instanceURL = instanceURL.hasSuffix("/") ? String(instanceURL.dropLast()) : instanceURL
         self.accessToken = accessToken
-        self.accessSecret = accessSecret
-        self.apiKey = apiKey
-        self.apiSecret = apiSecret
-        self.handle = handle
-        self.accessJwt = accessJwt
-        self.did = did
+        print("Mastodon Client: Zugangsdaten für \(self.instanceURL ?? "unbekannte Instanz") gespeichert.")
+    }
+    
+    // MARK: - Hilfsfunktionen
+    
+    /**
+     * Erstellt den Body für einen Multipart/Form-Data Request (für Medien-Upload).
+     */
+    private func createMultipartBody(mediaData: Data, mimeType: String, boundary: String, mediaAlt: String?) -> Data {
+        var body = Data()
+        let lineBreak = "\r\n"
         
+        // Füge das Medien-Teil hinzu (die eigentliche Datei)
+        body.append("--\(boundary)\(lineBreak)".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"media.\(mimeType.split(separator: "/").last ?? "dat")\"\(lineBreak)".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\(lineBreak)\(lineBreak)".data(using: .utf8)!)
+        body.append(mediaData)
+        body.append("\(lineBreak)".data(using: .utf8)!)
+
+        // Füge den Alt-Text hinzu, falls vorhanden
+        if let alt = mediaAlt {
+            body.append("--\(boundary)\(lineBreak)".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"description\"\(lineBreak)\(lineBreak)".data(using: .utf8)!)
+            body.append(alt.data(using: .utf8)!)
+            body.append("\(lineBreak)".data(using: .utf8)!)
+        }
+        
+        // Abschluss-Boundary
+        body.append("--\(boundary)--\(lineBreak)".data(using: .utf8)!)
+        
+        return body
     }
     
-    static func defaultAccount(for kind: AccountKind) -> Account {
-        switch kind {
-        case .twitter:
-            return Account(
-                name: "New Twitter Account",
-                kind: .twitter,
-                enabled: true,
-                accessToken: "TW_ACCESS_TOKEN",
-                accessSecret: "TW_ACCESS_TOKEN_SECRET",
-                apiKey: "TW_API_KEY",
-                apiSecret: "TW_API_SECRET"
-            )
-        case .bluesky:
-            return Account(
-                name: "New Bluesky Account",
-                kind: .bluesky,
-                enabled: true,
-                accessToken: "BSKY_APP_PASSWORD",
-                handle: "BSKY_HANDLE"
-                
-            )
+    // MARK: - API-Funktion 1: Medien-Upload
+    
+    /**
+     * Lädt Medien (Bild, Video) hoch und gibt die Media ID zur späteren Verwendung zurück.
+     * Endpunkt: POST /api/v1/media
+     */
+    private func uploadMedia(imageData: Data, mimeType: String, altText: String? = nil) async throws -> String {
+        guard let baseURL = instanceURL, let token = accessToken else {
+            throw MastodonError.missingCredentials
         }
-    }
-}
-
-// MARK: - Optional Binding Helper
-
-extension Binding where Value == String? {
-    func unwrapped(defaultValue: String = "") -> Binding<String> {
-        Binding<String>(
-            get: { self.wrappedValue ?? defaultValue },
-            set: { self.wrappedValue = $0 }
-        )
-    }
-}
-
-// MARK: - ViewModel
-
-@MainActor
-final class SocialPosterViewModel: ObservableObject {
-    @Published var accounts: [Account] = []
-    @Published var message: String = ""
-    @Published var selectedFile: URL? = nil
-    @Published var statusLog: [String] = []
-
-    private let storageURL: URL = {
-        let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        return url.appendingPathComponent("accounts.json")
-    }()
-
-    func loadAccounts() async {
+        
+        guard let url = URL(string: "\(baseURL)/api/v1/media") else {
+            throw MastodonError.invalidURL
+        }
+        
+        let boundary = UUID().uuidString
+        let multipartBody = createMultipartBody(mediaData: imageData, mimeType: mimeType, boundary: boundary, mediaAlt: altText)
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.httpBody = multipartBody
+        
+        let (respData, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw MastodonError.apiError(status: 0, message: "Keine HTTP-Antwort erhalten.")
+        }
+        
+        // Mastodon antwortet mit 200 (Synchron) oder 202 (Asynchron)
+        guard httpResponse.statusCode == 200 || httpResponse.statusCode == 202 else {
+            let errorMsg = String(data: respData, encoding: .utf8) ?? "Unbekannter Fehler"
+            print("API Fehler Status \(httpResponse.statusCode): \(errorMsg)")
+            throw MastodonError.apiError(status: httpResponse.statusCode, message: "Medien-Upload fehlgeschlagen: \(errorMsg)")
+        }
+        
         do {
-            let data = try Data(contentsOf: storageURL)
-            accounts = try JSONDecoder().decode([Account].self, from: data)
+            let mediaResponse = try JSONDecoder().decode(MediaResponse.self, from: respData)
+            print("Medien-Upload erfolgreich. Media ID: \(mediaResponse.id)")
+            return mediaResponse.id
         } catch {
-            accounts = []
-            print("No accounts found or failed to load: \(error)")
+            print("Decodierungsfehler (Media Response): \(error)")
+            throw MastodonError.decodingError(error)
         }
     }
-
-    func saveAccounts() async {
+    
+    // MARK: - API-Funktion 2: Status erstellen (Toot)
+    
+    /**
+     * Erstellt einen Status (Toot) mit Text und optionalen Medien-IDs.
+     * Endpunkt: POST /api/v1/statuses
+     */
+    private func createStatus(text: String, mediaIds: [String]? = nil) async throws -> StatusResponse {
+        guard let baseURL = instanceURL, let token = accessToken else {
+            throw MastodonError.missingCredentials
+        }
+        
+        guard let url = URL(string: "\(baseURL)/api/v1/statuses") else {
+            throw MastodonError.invalidURL
+        }
+        
+        // Das Payload-Format ist eine einfache JSON-Struktur
+        var payload: [String: Any] = ["status": text, "visibility": "public"]
+        
+        if let ids = mediaIds, !ids.isEmpty {
+            payload["media_ids"] = ids
+        }
+        
+        let jsonBody = try JSONSerialization.data(withJSONObject: payload)
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = jsonBody
+        
+        let (respData, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw MastodonError.apiError(status: 0, message: "Keine HTTP-Antwort erhalten.")
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            let errorMsg = String(data: respData, encoding: .utf8) ?? "Unbekannter Fehler"
+            print("API Fehler Status \(httpResponse.statusCode): \(errorMsg)")
+            throw MastodonError.apiError(status: httpResponse.statusCode, message: "Status-Post fehlgeschlagen: \(errorMsg)")
+        }
+        
         do {
-            let data = try JSONEncoder().encode(accounts)
-            try data.write(to: storageURL)
+            let statusResponse = try JSONDecoder().decode(StatusResponse.self, from: respData)
+            print("Status erfolgreich erstellt. ID: \(statusResponse.id)")
+            return statusResponse
         } catch {
-            print("Failed to save accounts: \(error)")
-        }
-    }
-
-    func addAccount(_ account: Account) async {
-        accounts.append(account)
-        await saveAccounts()
-    }
-
-    func editAccount(_ account: Account) async {
-        if let idx = accounts.firstIndex(where: { $0.id == account.id }) {
-            accounts[idx] = account
-            await saveAccounts()
-        }
-    }
-
-    
-    func deleteAccount(_ account: Account) async {
-        if let idx = accounts.firstIndex(where: { $0.id == account.id }) {
-            accounts.remove(at: idx)
-            await saveAccounts()
-            statusLog.append("[\(account.kind.rawValue)] \(account.name): Deleted")
+            print("Decodierungsfehler (Status Response): \(error)")
+            throw MastodonError.decodingError(error)
         }
     }
     
-    @MainActor
-    func postMessage() async {
-        for acc in accounts where acc.enabled {
-            do {
-                let _: String
-                switch acc.kind {
-                case .twitter:
-                    let myCredentials = OAuthCredentials(
-                        consumerKey: (acc.apiKey!) as String,
-                        consumerSecret: (acc.apiSecret!) as String,
-                        accessToken: (acc.accessToken!) as String,
-                        accessTokenSecret: (acc.accessSecret!) as String,
-                        v2AuthToken: "AAAAAAAAAAAAAAAAAAAAAPX5igEAAAAABp1YC4py63%2BvOMIHlxJ7JhIq13Y%3Dz0iUHZQS7DKkAPN23NH0obA2kAG1vRdkgojqNhLVSMeVkiZSqR" // Oder wieder der Access Token, je nach API-App-Einstellungen
-                    )
-
-                    // 2. Sitzung initialisieren
-                    let twitterAPI = TwitterAPI()
-                    twitterAPI.createSession(credentials: myCredentials)
-                    let neues_image = self.selectedFile;
-                    // 3. Tweet posten
-                    // Beispiel für nur Text
-                    twitterAPI.postTweet(text: self.message , image: nil) { result in
-                        switch result {
-                        case .success(let tweetId):
-                            print("Text-Tweet erfolgreich, ID: \(tweetId)")
-                        case .failure(let error):
-                            print("Fehler beim Text-Tweet: \(error.localizedDescription)")
-                        }
-                    }
-                case .bluesky:
-                    
-                    let  BLUESKY_HANDLE = (acc.handle!) as String// Ersetzen
-                    let  BLUESKY_APP_PASSWORD = (acc.accessToken!) as String // Ersetzen (App-Passwort)
-                    let client = BlueskyAPIClient()
-                    try? await client.createSession(handle: BLUESKY_HANDLE, password: BLUESKY_APP_PASSWORD)
-                    print("BLUESKY_HANDLE",BLUESKY_HANDLE)
-                    print("BLUESKY_APP_PASSWORD",BLUESKY_APP_PASSWORD)
-
-                    print("Attempting to create session...")
-                    print("Session successful!")
-                    
-                    let postText = self.message
-                    let languages = ["en-US"]
-
-                    print("Attempting to create post...")
-                    let postResponse = try await client.createPost(text: postText, langs: languages)
-                    
-                    print("✅ Post successful!")
-                    print("URI: \(postResponse.uri)")
-                }
-                // Optionally mark success
-                self.statusLog.append("[\(acc.kind.rawValue.capitalized)] \(acc.name): Success")
-            } catch {
-                self.statusLog.append("[\(acc.kind.rawValue.capitalized)] \(acc.name): \(error.localizedDescription)")
-            }
-        }
-    }
-
-
+    // MARK: - API-Funktion 3: Kombinierter Post
     
-}
-
-// MARK: - Views
-
-import SwiftUI
-import PhotosUI
-
-struct ContentView: View {
-    @StateObject var vm = SocialPosterViewModel()
-    @State private var showingEditSheet: Account? = nil
-    @State private var showingAddSheet = false
-    @State private var addingKind: AccountKind = .twitter
-    
-    // Neue States für Medienauswahl
-    @State private var showingMediaPicker = false
-    @State private var selectedMediaItem: PhotosPickerItem? = nil
-    @State private var mediaPreviewData: Data? = nil
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Button("+ Add Twitter") {
-                    addingKind = .twitter
-                    showingAddSheet = true
-                }
-                .padding(6)
-                .background(Color.blue.opacity(0.7))
-                .foregroundColor(.white)
-                .cornerRadius(6)
-
-                Button("+ Add Bluesky") {
-                    addingKind = .bluesky
-                    showingAddSheet = true
-                }
-                .padding(6)
-                .background(Color.cyan.opacity(0.7))
-                .foregroundColor(.white)
-                .cornerRadius(6)
-            }
-
-            List {
-                ForEach(vm.accounts) { acc in
-                    HStack {
-                        Text(acc.name)
-                            .foregroundColor(acc.enabled ? .primary : .gray)
-                        Spacer()
-                        Text(acc.kind.rawValue.capitalized)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Button("Edit") { showingEditSheet = acc }
-                            .padding(.leading)
-                    }
-                }
-            }
-            .frame(height: 200)
-
-            Text("Message").font(.headline)
-            TextEditor(text: $vm.message)
-                .frame(height: 100)
-                .border(Color.gray)
-            
-            // Button für Medien hinzufügen
-            Button(action: {
-                showingMediaPicker = true
-            }) {
-                HStack {
-                    Image(systemName: "photo.on.rectangle")
-                    Text("Add Image/Video")
-                }
-                .padding(6)
-                .background(Color.orange.opacity(0.7))
-                .foregroundColor(.white)
-                .cornerRadius(6)
+    /**
+     * Kombinierte Funktion zum Erstellen eines Posts, der optional ein Bild hochlädt.
+     * 1. Lädt das Medium hoch, falls vorhanden.
+     * 2. Erstellt den Status mit der erhaltenen Media ID.
+     */
+    func postStatus(text: String, image: UIImage?, altText: String? = nil) async throws -> StatusResponse {
+        var mediaIds: [String]? = nil
+        
+        if let image = image {
+            guard let imageData = image.jpegData(compressionQuality: 0.9) else {
+                throw MastodonError.invalidImageData
             }
             
-            // Vorschau der ausgewählten Datei
-            if let data = mediaPreviewData {
-                if let uiImage = UIImage(data: data) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 150)
-                        .cornerRadius(6)
-                        .padding(.vertical, 4)
-                } else {
-                    Text("Selected media preview not available")
-                        .foregroundColor(.secondary)
-                        .padding(.vertical, 4)
-                }
-            }
-
-            Button("🚀 Post") {
-                // Media wird mit übergeben
-                vm.selectedFile = saveTempFile(data: mediaPreviewData)
-                Task { await vm.postMessage() }
-            }
-            .padding()
-            .background(Color.green)
-            .foregroundColor(.white)
-            .cornerRadius(8)
-
-            LogPanelView(statusLog: vm.statusLog)
-                .frame(height: 180)
-                .border(Color.gray)
+            // Mastodon benötigt den MIME-Typ (hier nehmen wir JPEG)
+            let mimeType = "image/jpeg"
+            
+            // 1. Medien-Upload durchführen
+            let mediaId = try await uploadMedia(imageData: imageData, mimeType: mimeType, altText: altText)
+            mediaIds = [mediaId]
         }
-        .padding()
-        // MARK: - Sheets
-        .sheet(item: $showingEditSheet) { acc in
-            EditAccountView(
-                account: acc,
-                onSave: { updated in Task { await vm.editAccount(updated) } },
-                onDelete: { deleted in Task { await vm.deleteAccount(deleted) } }
-            )
-        }
-        .sheet(isPresented: $showingAddSheet) {
-            AddAccountView(kind: addingKind) { newAcc in
-                Task { await vm.addAccount(newAcc) }
-            }
-        }
-        // MARK: - Media Picker
-        .photosPicker(isPresented: $showingMediaPicker, selection: $selectedMediaItem, matching: .any(of: [.images, .videos]))
-        .onChange(of: selectedMediaItem) { newItem in
-            Task {
-                if let data = try? await newItem?.loadTransferable(type: Data.self) {
-                    mediaPreviewData = data
-                }
-            }
-        }
-
-        .task { await vm.loadAccounts() }
-    }
-    
-    // Hilfsfunktion zum Speichern temporärer Datei für den Post
-    private func saveTempFile(data: Data?) -> URL? {
-        guard let data = data else { return nil }
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        do {
-            try data.write(to: tempURL)
-            return tempURL
-        } catch {
-            print("Failed to write temp media file: \(error)")
-            return nil
-        }
-    }
-}
-
-
-// MARK: - Log Panel
-
-private struct LogPanelView: View {
-    let statusLog: [String]
-    var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 4) {
-                ForEach(statusLog.reversed(), id: \.self) { entry in
-                    Text(entry).font(.caption)
-                }
-            }
-            .padding(4)
-        }
-    }
-}
-
-// MARK: - Edit / Add Views
-struct EditAccountView: View {
-    @State var account: Account
-    let onSave: (Account) -> Void
-    let onDelete: (Account) -> Void
-    @Environment(\.presentationMode) var presentationMode
-
-    var body: some View {
-        Form {
-            Section("Account Info") {
-                TextField("Name", text: $account.name)
-                Toggle("Enabled", isOn: $account.enabled)
-            }
-
-            if account.kind == .twitter {
-                Section("Twitter Credentials") {
-                    TextField("Access Token", text: $account.accessToken.unwrapped())
-                    TextField("Access Secret", text: $account.accessSecret.unwrapped())
-                    TextField("API Key", text: $account.apiKey.unwrapped())
-                    TextField("API Secret", text: $account.apiSecret.unwrapped())
-                }
-            } else if account.kind == .bluesky {
-                Section("Bluesky Credentials") {
-                    TextField("Handle", text: $account.handle.unwrapped())
-                    TextField("App Password", text: $account.accessToken.unwrapped())
-                }
-            }
-
-            Button("Save") {
-                onSave(account)
-                presentationMode.wrappedValue.dismiss()
-            }
-
-            Button("Delete") {
-                onDelete(account)
-                presentationMode.wrappedValue.dismiss()
-            }
-            .foregroundColor(.red)
-        }
-        .padding()
-    }
-}
-
-
-struct AddAccountView: View {
-    @State var account: Account
-    let kind: AccountKind
-    let onSave: (Account) -> Void
-    @Environment(\.presentationMode) var presentationMode
-
-    init(kind: AccountKind, onSave: @escaping (Account) -> Void) {
-        self.kind = kind
-        _account = State(initialValue: Account(name: "", kind: kind))
-        self.onSave = onSave
-    }
-
-    var body: some View {
-        Form {
-            Section("Account Info") {
-                TextField("Name", text: $account.name)
-                Toggle("Enabled", isOn: $account.enabled)
-            }
-
-            if kind == .twitter {
-                Section("Twitter Credentials") {
-                    TextField("Access Token", text: $account.accessToken.unwrapped())
-                    TextField("Access Secret", text: $account.accessSecret.unwrapped())
-                    TextField("API Key", text: $account.apiKey.unwrapped())
-                    TextField("API Secret", text: $account.apiSecret.unwrapped())
-                }
-            } else if kind == .bluesky {
-                Section("Bluesky Credentials") {
-                    TextField("Handle", text: $account.handle.unwrapped())
-                    TextField("App Password", text: $account.accessToken.unwrapped())
-                }
-            }
-
-            Button("Add") {
-                onSave(account)
-                presentationMode.wrappedValue.dismiss()
-            }
-        }
-        .padding()
+        
+        // 2. Status erstellen (mit oder ohne Media IDs)
+        return try await createStatus(text: text, mediaIds: mediaIds)
     }
 }
