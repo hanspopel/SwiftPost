@@ -25,7 +25,7 @@ struct SwiftPostApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainAppView()
         }
         .modelContainer(sharedModelContainer)
     }

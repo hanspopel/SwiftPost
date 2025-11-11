@@ -12,7 +12,6 @@
 		3341F7002EBCA7E10042DACF /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3341F6FF2EBCA7E10042DACF /* Foundation.framework */; };
 		3341F7022EBCA7ED0042DACF /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3341F7012EBCA7ED0042DACF /* CoreGraphics.framework */; };
 		3341F7042EBCA7FB0042DACF /* CryptoKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3341F7032EBCA7FB0042DACF /* CryptoKit.framework */; };
-		337EECF72EC013C200389FCA /* SlectableKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 337EECF02EC013C200389FCA /* SlectableKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -30,13 +29,6 @@
 			remoteGlobalIDString = 3341F6C92EBCA6A60042DACF;
 			remoteInfo = SwiftPost;
 		};
-		337EECF52EC013C200389FCA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 3341F6C22EBCA6A60042DACF /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 337EECEF2EC013C200389FCA;
-			remoteInfo = SlectableKeyboard;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -46,7 +38,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				337EECF72EC013C200389FCA /* SlectableKeyboard.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -62,7 +53,6 @@
 		3341F6FF2EBCA7E10042DACF /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		3341F7012EBCA7ED0042DACF /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		3341F7032EBCA7FB0042DACF /* CryptoKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CryptoKit.framework; path = System/Library/Frameworks/CryptoKit.framework; sourceTree = SDKROOT; };
-		337EECF02EC013C200389FCA /* SlectableKeyboard.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SlectableKeyboard.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -72,13 +62,6 @@
 				Info.plist,
 			);
 			target = 3341F6C92EBCA6A60042DACF /* SwiftPost */;
-		};
-		337EECFB2EC013C200389FCA /* Exceptions for "SlectableKeyboard" folder in "SlectableKeyboard" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 337EECEF2EC013C200389FCA /* SlectableKeyboard */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -99,14 +82,6 @@
 		3341F6E62EBCA6A80042DACF /* SwiftPostUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = SwiftPostUITests;
-			sourceTree = "<group>";
-		};
-		337EECF12EC013C200389FCA /* SlectableKeyboard */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				337EECFB2EC013C200389FCA /* Exceptions for "SlectableKeyboard" folder in "SlectableKeyboard" target */,
-			);
-			path = SlectableKeyboard;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -138,13 +113,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		337EECED2EC013C200389FCA /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -154,7 +122,6 @@
 				3341F6CC2EBCA6A60042DACF /* SwiftPost */,
 				3341F6DC2EBCA6A80042DACF /* SwiftPostTests */,
 				3341F6E62EBCA6A80042DACF /* SwiftPostUITests */,
-				337EECF12EC013C200389FCA /* SlectableKeyboard */,
 				3341F6FA2EBCA7D30042DACF /* Frameworks */,
 				3341F6CB2EBCA6A60042DACF /* Products */,
 			);
@@ -166,7 +133,6 @@
 				3341F6CA2EBCA6A60042DACF /* SwiftPost.app */,
 				3341F6D92EBCA6A80042DACF /* SwiftPostTests.xctest */,
 				3341F6E32EBCA6A80042DACF /* SwiftPostUITests.xctest */,
-				337EECF02EC013C200389FCA /* SlectableKeyboard.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -198,7 +164,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				337EECF62EC013C200389FCA /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				3341F6CC2EBCA6A60042DACF /* SwiftPost */,
@@ -256,28 +221,6 @@
 			productReference = 3341F6E32EBCA6A80042DACF /* SwiftPostUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
-		337EECEF2EC013C200389FCA /* SlectableKeyboard */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 337EECF82EC013C200389FCA /* Build configuration list for PBXNativeTarget "SlectableKeyboard" */;
-			buildPhases = (
-				337EECEC2EC013C200389FCA /* Sources */,
-				337EECED2EC013C200389FCA /* Frameworks */,
-				337EECEE2EC013C200389FCA /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				337EECF12EC013C200389FCA /* SlectableKeyboard */,
-			);
-			name = SlectableKeyboard;
-			packageProductDependencies = (
-			);
-			productName = SlectableKeyboard;
-			productReference = 337EECF02EC013C200389FCA /* SlectableKeyboard.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -299,9 +242,6 @@
 						CreatedOnToolsVersion = 26.0.1;
 						TestTargetID = 3341F6C92EBCA6A60042DACF;
 					};
-					337EECEF2EC013C200389FCA = {
-						CreatedOnToolsVersion = 26.0.1;
-					};
 				};
 			};
 			buildConfigurationList = 3341F6C52EBCA6A60042DACF /* Build configuration list for PBXProject "SwiftPost" */;
@@ -321,7 +261,6 @@
 				3341F6C92EBCA6A60042DACF /* SwiftPost */,
 				3341F6D82EBCA6A80042DACF /* SwiftPostTests */,
 				3341F6E22EBCA6A80042DACF /* SwiftPostUITests */,
-				337EECEF2EC013C200389FCA /* SlectableKeyboard */,
 			);
 		};
 /* End PBXProject section */
@@ -342,13 +281,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		3341F6E12EBCA6A80042DACF /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		337EECEE2EC013C200389FCA /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -379,13 +311,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		337EECEC2EC013C200389FCA /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -398,11 +323,6 @@
 			isa = PBXTargetDependency;
 			target = 3341F6C92EBCA6A60042DACF /* SwiftPost */;
 			targetProxy = 3341F6E42EBCA6A80042DACF /* PBXContainerItemProxy */;
-		};
-		337EECF62EC013C200389FCA /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 337EECEF2EC013C200389FCA /* SlectableKeyboard */;
-			targetProxy = 337EECF52EC013C200389FCA /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -535,11 +455,11 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 64KW44F42K;
+				DEVELOPMENT_TEAM = 834XFBML77;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SwiftPost/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "";
+				INFOPLIST_KEY_CFBundleDisplayName = PolyPost;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -552,7 +472,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.zdbk.SwiftPost.SwiftPost;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zerodebug.swiftpost;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -571,11 +491,11 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 64KW44F42K;
+				DEVELOPMENT_TEAM = 834XFBML77;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SwiftPost/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "";
+				INFOPLIST_KEY_CFBundleDisplayName = PolyPost;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -588,7 +508,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.zdbk.SwiftPost.SwiftPost;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zerodebug.swiftpost;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -610,7 +530,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.zdbk.SwiftPost.SwiftPostTests;
+				PRODUCT_BUNDLE_IDENTIFIER = "Embedded-binary-s-bundle-identifier-is-not-prefixed-with-the-parent-app-s-bundle-identifier.-";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -632,7 +552,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.zdbk.SwiftPost.SwiftPostTests;
+				PRODUCT_BUNDLE_IDENTIFIER = "Embedded-binary-s-bundle-identifier-is-not-prefixed-with-the-parent-app-s-bundle-identifier.-";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -684,64 +604,6 @@
 			};
 			name = Release;
 		};
-		337EECF92EC013C200389FCA /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 64KW44F42K;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = SlectableKeyboard/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = SlectableKeyboard;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.zdbk.SwiftPost.SwiftPost.SlectableKeyboard;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		337EECFA2EC013C200389FCA /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 64KW44F42K;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = SlectableKeyboard/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = SlectableKeyboard;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.zdbk.SwiftPost.SwiftPost.SlectableKeyboard;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -777,15 +639,6 @@
 			buildConfigurations = (
 				3341F6F42EBCA6A80042DACF /* Debug */,
 				3341F6F52EBCA6A80042DACF /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		337EECF82EC013C200389FCA /* Build configuration list for PBXNativeTarget "SlectableKeyboard" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				337EECF92EC013C200389FCA /* Debug */,
-				337EECFA2EC013C200389FCA /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
